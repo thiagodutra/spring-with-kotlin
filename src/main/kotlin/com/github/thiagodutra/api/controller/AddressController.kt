@@ -21,12 +21,6 @@ class AddressController(
     val addressService: IAddressService
 ) {
 
-    //TODO Improve Generic Response for calls
-        //Almost done
-
-    //TODO ADD HttpStatus to API Calls
-        //DONE
-
     @ExceptionHandler(NoSuchElementException::class)
     fun handleException(e: NoSuchElementException): ResponseEntity<DefaultResponse> =
         ResponseEntity(DefaultResponse.Error(
@@ -44,6 +38,7 @@ class AddressController(
             "Some attributes are not compliant with its constraints"),
             HttpStatus.BAD_REQUEST)
 
+    //TODO refactor this to use DefaultResponse
     @GetMapping
     @ResponseStatus
     fun retrieveAllAddresses(): ResponseEntity<Collection<AddressDTO>> {
@@ -53,7 +48,8 @@ class AddressController(
     @GetMapping("/{id}")
     @ResponseStatus
     fun retrieveAddressById(@PathVariable id:Long): ResponseEntity<DefaultResponse> {
-        return ResponseEntity.status(HttpStatus.OK).body(addressService.retrieveAddressById(id))
+        val response = addressService.retrieveAddressById(id)
+        return handleDefaultResponse(response, HttpStatus.OK, HttpStatus.NOT_FOUND)
     }
 
     //TODO IMPROVE SEARCH METHOD
@@ -74,16 +70,30 @@ class AddressController(
 
     @PostMapping
     fun insertAddress(@Valid @RequestBody addressDTO: Collection<AddressDTO>): ResponseEntity<DefaultResponse> {
-        return ResponseEntity.status(HttpStatus.OK).body(addressService.insertAddress(addressDTO))
+        val response = addressService.insertAddress(addressDTO)
+        return handleDefaultResponse(response, HttpStatus.OK, HttpStatus.BAD_REQUEST)
     }
 
     @PutMapping("/{id}")
     fun editAddress(@PathVariable id:Long, @Valid @RequestBody addressDTO: AddressDTO): ResponseEntity<DefaultResponse>  {
-        return ResponseEntity.status(HttpStatus.OK).body(addressService.updateAddress(id, addressDTO))
+        val response = addressService.updateAddress(id, addressDTO)
+        return handleDefaultResponse(response, HttpStatus.OK, HttpStatus.NOT_FOUND)
     }
 
     @DeleteMapping("/{id}")
     fun deleteById(@PathVariable id:Long): ResponseEntity<DefaultResponse> {
-        return ResponseEntity.status(HttpStatus.OK).body(addressService.deleteAddressById(id))
+        val response = addressService.deleteAddressById(id)
+        return handleDefaultResponse(response, HttpStatus.OK, HttpStatus.BAD_REQUEST)
+    }
+
+    private fun handleDefaultResponse(response: DefaultResponse, successStatus:HttpStatus ,errorStatus: HttpStatus): ResponseEntity<DefaultResponse> {
+        if (checkResponse(response)) {
+            return ResponseEntity.status(successStatus).body(response)
+        }
+        return ResponseEntity.status(errorStatus).build()
+    }
+
+    private fun checkResponse(defaultResponse: DefaultResponse): Boolean {
+        return defaultResponse is DefaultResponse.Success
     }
 }
